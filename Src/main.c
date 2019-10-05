@@ -250,13 +250,13 @@ void vSender_task(void const * argument)
 {
   /* USER CODE BEGIN 6 */
   unsigned int lValue_to_send = (long) argument;
-  osStatus Queue_status;
+  osStatus xQueue_status;
   /* Infinite loop */
   for(;;)
   {
-    Queue_status = osMessagePut(Queue_handle, lValue_to_send, 0);
+    xQueue_status = osMessagePut(Queue_handle, lValue_to_send, 0);
     
-    if(Queue_status != osOK)
+    if(xQueue_status != osOK)
     {
       printf("\r\nCould not send the queue.");
       HAL_Delay(1);
@@ -277,7 +277,7 @@ void vSender_task(void const * argument)
 void vReceiver_task(void const * argument)
 {
   /* USER CODE BEGIN 7 */
-  osEvent Value_to_receive;
+  osEvent eValue_to_receive;
   /* Infinite loop */
   for(;;)
   {
@@ -287,10 +287,10 @@ void vReceiver_task(void const * argument)
       HAL_Delay(1);
     }
       
-    Value_to_receive = osMessageGet(Queue_handle, 100);
+    eValue_to_receive = osMessageGet(Queue_handle, 100);
 
-    if(Value_to_receive.status == osEventMessage)
-      printf("\r\nReceived = %u", (unsigned int) Value_to_receive.value.v);
+    if(eValue_to_receive.status == osEventMessage)
+      printf("\r\nReceived = %u", (unsigned int) eValue_to_receive.value.v);
     else
       printf("\r\nCould not receive from the queue.");
 
