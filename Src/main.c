@@ -45,7 +45,9 @@
 
 /* Private variables ---------------------------------------------------------*/
 osThreadId defaultTaskHandle;
-osMessageQId QueueHandle;
+osThreadId Sender_task_handle[2];
+osThreadId Receiver_task_handle;
+osMessageQId Queue_handle;
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -54,6 +56,8 @@ osMessageQId QueueHandle;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 void StartDefaultTask(void const * argument);
+void vSender_task(void const * argument);
+void vReceiver_task(void const * argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -113,8 +117,8 @@ int main(void)
 
   /* Create the queue(s) */
   /* definition and creation of Queue */
-  osMessageQDef(Queue, 5, uint32_t);
-  QueueHandle = osMessageCreate(osMessageQ(Queue), NULL);
+  osMessageQDef(Queue, 5, sizeof(long));
+  Queue_handle = osMessageCreate(osMessageQ(Queue), NULL);
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
@@ -127,6 +131,16 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
+  /* definition and creation of tasks Sender1 and Sender2 */
+  osThreadDef(Sender1, vSender_task, osPriorityNormal, 1, 100);
+  Sender_task_handle[0] = osThreadCreate(osThread(Sender1), (void *) 100);
+  osThreadDef(Sender2, vSender_task, osPriorityNormal, 1, 100);
+  Sender_task_handle[1] = osThreadCreate(osThread(Sender2), (void *) 200);
+
+  /* definition and creation of task Receiver */
+  osThreadDef(Receiver, vReceiver_task, osPriorityAboveNormal, 1, 100);
+  Receiver_task_handle = osThreadCreate(osThread(Receiver), NULL);
+
   /* USER CODE END RTOS_THREADS */
 
   /* Start scheduler */
@@ -223,6 +237,66 @@ void StartDefaultTask(void const * argument)
     osDelay(1);
   }
   /* USER CODE END 5 */ 
+}
+
+/* USER CODE BEGIN Header_vSender_task */
+/**
+  * @brief  Function implementing the Sender1 and Sender2 threads.
+  * @param  argument: lValue_to_send 
+  * @retval None
+  */
+/* USER CODE END Header_vSender_task */
+void vSender_task(void const * argument)
+{
+  /* USER CODE BEGIN 6 */
+  unsigned int lValue_to_send = (long) argument;
+  osStatus Queue_status;
+  /* Infinite loop */
+  for(;;)
+  {
+    Queue_status = osMessagePut(Queue_handle, lValue_to_send, 0);
+    
+    if(Queue_status != osOK)
+    {
+      printf("\r\nCould not send the queue.");
+      HAL_Delay(1);
+    }
+    
+    osThreadYield();
+  }
+  /* USER CODE END 6 */ 
+}
+
+/* USER CODE BEGIN Header_vReceiver_task */
+/**
+  * @brief  Function implementing the Receiver thread.
+  * @param  argument: None
+  * @retval None
+  */
+/* USER CODE END Header_vReceiver_task */
+void vReceiver_task(void const * argument)
+{
+  /* USER CODE BEGIN 7 */
+  osEvent Value_to_receive;
+  /* Infinite loop */
+  for(;;)
+  {
+    if(osMessageWaiting(Queue_handle) != 0)
+    {
+      printf("\r\nQueue should have been empty!");
+      HAL_Delay(1);
+    }
+      
+    Value_to_receive = osMessageGet(Queue_handle, 100);
+
+    if(Value_to_receive.status == osEventMessage)
+      printf("\r\nReceived = %u", (unsigned int) Value_to_receive.value.v);
+    else
+      printf("\r\nCould not receive from the queue.");
+
+    HAL_Delay(1);
+  }
+  /* USER CODE END 7 */ 
 }
 
 /**
